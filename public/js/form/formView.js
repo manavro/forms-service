@@ -13,6 +13,23 @@
 import { h } from '../dom.js';
 import { ANSWER_LIMITS, validateAnswer, validateAnswers } from '/shared/answers.js';
 
+// Берёт из сохранённых ответов только то, что подходит текущей форме: если организатор
+// успел удалить вопрос или вариант, устаревшее значение молча отбрасывается.
+function restoreAnswers(fields, saved) {
+  const source = saved !== null && typeof saved === 'object' ? saved : {};
+  const result = {};
+  for (const field of fields) {
+    if (!Object.hasOwn(source, field.id)) continue;
+    const raw = source[field.id];
+    const optionIds = new Set((field.options ?? []).map((o) => o.id));
+    if (TEXT_INPUTS[field.type] && typeof raw === 'string') result[field.id] = raw;
+    else if ((field.type === 'single_choice' || field.type === 'dropdown') && optionIds.has(raw)) result[field.id] = raw;
+    else if (field.type === 'multiple_choice' && Array.isArray(raw)) result[field.id] = raw.filter((id) => optionIds.has(id));
+    else if (field.type === 'checkbox' && typeof raw === 'boolean') result[field.id] = raw;
+  }
+  return result;
+}
+
 const TEXT_INPUTS = {
   short_text: { tag: 'input', attrs: { type: 'text' }, max: ANSWER_LIMITS.shortTextMax },
   long_text: { tag: 'textarea', attrs: { rows: 4 }, max: ANSWER_LIMITS.longTextMax },
@@ -27,11 +44,21 @@ const TEXT_INPUTS = {
 //   onFieldFocus(field)         — студент перешёл к полю;
 //   onFieldChange(field, value) — изменился ответ;
 //   onFieldError(field)         — у поля появилась ошибка.
-export function createFormView(form, { onSubmit, submitLabel = 'Отправить', hooks = {}, notice = null }) {
-  const answers = {}; // id поля → текущее значение
+// initialAnswers — ответы, с которыми форма откроется (например, из сохранённого черновика).
+// notice — элемент над формой (например, сообщение о восстановленном черновике).
+//
+// Возвращает { element, getAnswers }.
+export function createFormView(form, { onSubmit, submitLabel = 'Отправить', hooks = {}, notice = null, initialAnswers = {} }) {
+  const answers = restoreAnswers(form.fields, initialAnswers); // id поля → текущее значение
   const touched = new Set(); // поля, ошибки которых уже нужно показывать
   const questions = new Map(); // id поля → { wrapper, inputs, errorEl }
   let submitting = false;
+
+  // Прогресс: сколько вопросов уже с ответом и сколько обязательных осталось.
+  // Студенту проще дойти до конца, когда видно, сколько ещё впереди.
+  const progressText = h('span', { class: 'pf-progress-text' });
+  const progressBar = h('progress', { class: 'pf-progress-bar', max: form.fields.length, 'aria-label': 'Заполнено вопросов' });
+  const progress = form.fields.length >= 2 ? h('div', { class: 'pf-progress' }, progressText, progressBar) : null;
 
   const summary = h('div', { class: 'pf-summary', role: 'alert', tabindex: '-1', hidden: true });
   const submitError = h('p', { class: 'pf-submit-error', role: 'alert', hidden: true });
@@ -61,10 +88,12 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
         h('p', { class: 'pf-legend' }, h('span', { class: 'pf-star', 'aria-hidden': 'true' }, '*'), ' — обязательный вопрос'),
     ),
     notice,
+    progress,
     formEl,
   );
+  updateProgress();
 
-  return { element };
+  return { element, getAnswers: () => ({ ...answers }) };
 
   // ---------- Поля ----------
 
@@ -95,6 +124,7 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
         class: tag === 'textarea' ? 'textarea' : 'input',
         placeholder: field.placeholder || undefined,
         maxLength: max,
+        value: answers[field.id] ?? '',
         'aria-required': field.required ? 'true' : undefined,
         'aria-describedby': describedBy,
         onfocus: () => hooks.onFieldFocus?.(field),
@@ -120,6 +150,7 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
         {
           id: inputId,
           class: 'select',
+          value: answers[field.id] ?? '',
           'aria-required': field.required ? 'true' : undefined,
           'aria-describedby': describedBy,
           onfocus: () => hooks.onFieldFocus?.(field),
@@ -149,6 +180,7 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
           value: option.id,
           // id только у первого варианта: на него ведёт ссылка из списка ошибок.
           id: i === 0 ? inputId : undefined,
+          checked: multiple ? (answers[field.id] ?? []).includes(option.id) : answers[field.id] === option.id,
           onfocus: () => hooks.onFieldFocus?.(field),
           onchange: () => {
             touched.add(field.id);
@@ -180,6 +212,7 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
       const input = h('input', {
         type: 'checkbox',
         id: inputId,
+        checked: answers[field.id] === true,
         'aria-required': field.required ? 'true' : undefined,
         'aria-describedby': describedBy,
         onfocus: () => hooks.onFieldFocus?.(field),
@@ -212,6 +245,18 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
     answers[field.id] = value;
     hooks.onFieldChange?.(field, value);
     refreshError(field);
+    updateProgress();
+  }
+
+  function updateProgress() {
+    if (!progress) return;
+    const answered = form.fields.filter((f) => !isEmpty(answers[f.id])).length;
+    const requiredLeft = form.fields.filter((f) => f.required && isEmpty(answers[f.id])).length;
+    progressBar.value = answered;
+    let text = `Заполнено ${answered} из ${form.fields.length}`;
+    if (requiredLeft > 0) text += ` · обязательных осталось: ${requiredLeft}`;
+    else if (form.fields.some((f) => f.required)) text += ' · все обязательные заполнены';
+    progressText.textContent = text;
   }
 
   // Показывает или убирает ошибку поля, если её уже пора показывать.

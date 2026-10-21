@@ -51,6 +51,63 @@
   color: var(--danger);
 }
 
+/* Прогресс прилипает к верху экрана: его видно, пока студент листает длинную форму. */
+.pf-progress {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 -4px 12px;
+  padding: 10px 4px;
+  font-size: 0.875rem;
+  color: var(--muted);
+  background: #eef1f6;
+}
+
+.pf-progress-bar {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  border: 0;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  overflow: hidden;
+}
+
+.pf-progress-bar::-webkit-progress-bar {
+  background: var(--accent-soft);
+}
+
+.pf-progress-bar::-webkit-progress-value {
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+
+.pf-progress-bar::-moz-progress-bar {
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+.pf-restored {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+  padding: 14px 20px;
+  background: var(--accent-soft);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.pf-restored p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
 .pf-form {
   display: flex;
   flex-direction: column;
