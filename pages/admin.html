@@ -3,14 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Админка · Сервис форм</title>
+  <title>Формы · Админка</title>
   <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/admin.css">
+  <script type="module" src="/static/js/admin/list.js"></script>
 </head>
 <body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/admin">Сервис форм</a>
+    </div>
+  </header>
   <main class="container">
-    <div class="card">
-      <h1>Сервис форм</h1>
-      <p class="muted">Сервер работает. Конструктор форм появится на следующих шагах.</p>
+    <div class="page-head">
+      <h1>Формы</h1>
+      <button class="btn btn-primary" type="button" id="create-form">Создать форму</button>
+    </div>
+    <div id="forms" aria-live="polite">
+      <p class="muted">Загружаю…</p>
     </div>
   </main>
 </body>

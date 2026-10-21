@@ -63,6 +63,10 @@ export function createFormService(store) {
       return findForm(store.state, id);
     },
 
+    responseCount(id) {
+      return store.state.responses.filter((r) => r.formId === id).length;
+    },
+
     create(input) {
       const content = parseFormContent(input);
       return store.update((state) => {

@@ -7,6 +7,7 @@ import express from 'express';
 import { HttpError } from './errors.js';
 import { createFormService } from './forms/formService.js';
 import { formsApiRouter } from './routes/formsApi.js';
+import { securityHeaders } from './securityHeaders.js';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const pagesDir = path.join(rootDir, 'pages');
@@ -20,6 +21,7 @@ export function createApp({ db }) {
 
   // Не сообщаем наружу, на чём написан сервер.
   app.disable('x-powered-by');
+  app.use(securityHeaders);
 
   // Тело запросов — только JSON и не больше 100 КБ: форме отклика больше не нужно,
   // а огромные запросы не смогут забить память сервера.
@@ -38,6 +40,7 @@ export function createApp({ db }) {
   // Страницы.
   app.get('/', (req, res) => res.redirect('/admin'));
   app.get('/admin', (req, res) => res.sendFile(path.join(pagesDir, 'admin.html')));
+  app.get('/admin/forms/:id', (req, res) => res.sendFile(path.join(pagesDir, 'admin-form.html')));
 
   // Ничего не нашлось.
   app.use('/api', (req, res) => {

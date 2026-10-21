@@ -73,6 +73,7 @@ describe('API форм', () => {
     const got = await api('GET', `/api/forms/${form.id}`);
     assert.equal(got.status, 200);
     assert.deepEqual(got.body.form, form);
+    assert.equal(got.body.responseCount, 0);
 
     const missing = await api('GET', '/api/forms/nope');
     assert.equal(missing.status, 404);

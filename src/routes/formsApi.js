@@ -2,7 +2,7 @@
 //
 //   GET    /api/forms                 список форм
 //   POST   /api/forms                 создать форму (черновик)
-//   GET    /api/forms/:id             одна форма целиком
+//   GET    /api/forms/:id             одна форма целиком и число ответов на неё
 //   PUT    /api/forms/:id             сохранить название, описание и поля (нужна version)
 //   DELETE /api/forms/:id             удалить форму вместе с ответами
 //   POST   /api/forms/:id/publish     опубликовать / снова открыть приём
@@ -26,7 +26,8 @@ export function formsApiRouter(forms) {
   });
 
   router.get('/:id', (req, res) => {
-    res.json({ form: forms.get(req.params.id) });
+    const form = forms.get(req.params.id);
+    res.json({ form, responseCount: forms.responseCount(form.id) });
   });
 
   router.put('/:id', async (req, res) => {
