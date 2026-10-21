@@ -1,0 +1,242 @@
+/* Форма для заполнения: страница студента и предпросмотр в конструкторе.
+   Сделана в первую очередь под телефон — студенты часто заполняют формы с него. */
+
+.pf-page {
+  background: #eef1f6;
+}
+
+.pf {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.pf-loading {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.pf-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  box-shadow: var(--shadow);
+}
+
+.pf-header {
+  margin-bottom: 16px;
+  border-top: 6px solid var(--accent);
+}
+
+.pf-title {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+  overflow-wrap: anywhere;
+}
+
+.pf-description {
+  margin: 0 0 8px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.pf-legend {
+  margin: 12px 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.pf-star {
+  color: var(--danger);
+}
+
+.pf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-question {
+  margin: 0;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+
+/* У fieldset свои отступы и рамка по умолчанию — приводим к виду карточки. */
+fieldset.pf-question {
+  padding: 20px 24px;
+}
+
+/* Браузеры рисуют legend поверх рамки fieldset. float возвращает её внутрь карточки. */
+fieldset.pf-question > legend {
+  float: left;
+  width: 100%;
+}
+
+fieldset.pf-question > legend ~ * {
+  clear: both;
+}
+
+.pf-question.has-error {
+  border-color: var(--danger);
+  box-shadow: inset 4px 0 0 var(--danger);
+}
+
+.pf-label {
+  display: block;
+  margin-bottom: 8px;
+  padding: 0;
+  font-weight: 600;
+  font-size: 1.02rem;
+  overflow-wrap: anywhere;
+}
+
+.pf-help {
+  margin: -4px 0 10px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.pf-question .input,
+.pf-question .select,
+.pf-question .textarea {
+  font-size: 1rem;
+  min-height: 44px;
+}
+
+.pf-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Весь вариант кликабельный и достаточно крупный для пальца. */
+.pf-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  margin: 0 -12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.pf-option:hover {
+  background: var(--surface-muted);
+}
+
+.pf-option input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.pf-consent {
+  font-weight: 500;
+}
+
+.pf-error {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.pf-error:empty {
+  display: none;
+}
+
+.pf-summary {
+  padding: 16px 20px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+}
+
+.pf-summary-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.pf-summary ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.pf-summary a {
+  color: inherit;
+}
+
+.pf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.pf-submit {
+  min-height: 48px;
+  padding: 10px 28px;
+  font-size: 1rem;
+}
+
+.pf-submit-error {
+  margin: 0;
+  color: var(--danger);
+}
+
+/* Ловушка для ботов: убрана за пределы экрана, но остаётся в разметке. */
+.pf-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.pf-message {
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.pf-message-subtitle {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+.pf-message-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  font-size: 1.8rem;
+  color: var(--success);
+  background: var(--success-soft);
+  border-radius: 50%;
+}
+
+@media (max-width: 600px) {
+  .pf {
+    padding: 12px 10px 48px;
+  }
+
+  .pf-card,
+  fieldset.pf-question {
+    padding: 16px;
+  }
+
+  .pf-title {
+    font-size: 1.35rem;
+  }
+
+  .pf-submit {
+    width: 100%;
+  }
+}

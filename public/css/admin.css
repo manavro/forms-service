@@ -254,6 +254,42 @@
   font-weight: 600;
 }
 
+/* Предпросмотр формы */
+
+.preview-dialog {
+  width: min(760px, calc(100vw - 24px));
+  height: calc(100vh - 48px);
+  max-height: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.preview-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-dialog::backdrop {
+  background: rgba(16, 24, 40, 0.55);
+}
+
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.preview-body {
+  flex: 1;
+  overflow: auto;
+  background: #eef1f6;
+}
+
 @media (max-width: 600px) {
   .card {
     padding: 16px;

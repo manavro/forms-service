@@ -3,10 +3,12 @@
 // и списком ошибок по полям (details).
 
 export class ApiError extends Error {
-  constructor(status, message, details = []) {
+  // data — всё тело ответа с ошибкой (там могут быть дополнительные сведения, например название формы).
+  constructor(status, message, details = [], data = null) {
     super(message);
     this.status = status;
     this.details = details;
+    this.data = data;
   }
 }
 
@@ -31,7 +33,7 @@ export async function api(method, url, body) {
     // Ответ не JSON — ниже это обработается как ошибка.
   }
   if (!res.ok) {
-    throw new ApiError(res.status, data?.error ?? `Ошибка сервера (${res.status})`, data?.details ?? []);
+    throw new ApiError(res.status, data?.error ?? `Ошибка сервера (${res.status})`, data?.details ?? [], data);
   }
   return data;
 }

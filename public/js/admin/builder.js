@@ -12,6 +12,7 @@
 import { api } from '../api.js';
 import { h, mount } from '../dom.js';
 import { newId } from '../ids.js';
+import { createFormView } from '../form/formView.js';
 import { copyText, countLabel, plural, publicFormUrl, statusBadge, toast } from '../ui.js';
 import { FIELD_TYPES, FORM_LIMITS } from '/shared/fieldTypes.js';
 
@@ -192,6 +193,7 @@ function updatePanel() {
     statusBadge(form.status),
     h('span', { class: ['save-state', dirty && 'is-dirty'], role: 'status' }, saveState),
     h('span', { class: 'spacer' }),
+    button('Предпросмотр', openPreview, { title: 'Как форму увидит студент — с учётом несохранённых правок' }),
     button('Сохранить', () => save(), {
       primary: form.status !== 'draft' && dirty,
       disabled: busy || !dirty || conflict,
@@ -539,6 +541,62 @@ function removeOption(field, index) {
   markChanged();
   const next = field.options[index] ?? field.options[index - 1];
   render(`${field.id}:opt:${next.id}`);
+}
+
+// ---------- Предпросмотр ----------
+
+// Показывает форму так, как её увидит студент, — та же отрисовка, что и на публичной странице.
+// Берётся текущий черновик, поэтому несохранённые правки тоже видны. Ответ никуда не отправляется.
+function openPreview() {
+  const { draft } = state;
+  const previewForm = {
+    title: draft.title.trim() || 'Без названия',
+    description: draft.description.trim(),
+    fields: structuredClone(draft.fields),
+  };
+
+  const content = h('div', { class: 'preview-body' });
+  const showForm = () => {
+    const view = createFormView(previewForm, {
+      submitLabel: 'Отправить',
+      onSubmit: async () => {
+        mount(
+          content,
+          h(
+            'div',
+            { class: 'pf' },
+            h(
+              'div',
+              { class: 'pf-card pf-message is-success', role: 'status' },
+              h('div', { class: 'pf-message-icon', 'aria-hidden': 'true' }, '✓'),
+              h('h2', { class: 'pf-title' }, 'Всё заполнено верно'),
+              h('p', { class: 'muted' }, 'Это предпросмотр: ответ никуда не отправлен. Студент увидит здесь «Спасибо! Ответ отправлен».'),
+              h('button', { class: 'btn', type: 'button', onclick: showForm }, 'Заполнить ещё раз'),
+            ),
+          ),
+        );
+        content.scrollTop = 0;
+      },
+    });
+    mount(content, view.element);
+  };
+  showForm();
+
+  const dialog = h(
+    'dialog',
+    { class: 'preview-dialog', 'aria-label': 'Предпросмотр формы', onclose: () => dialog.remove() },
+    h(
+      'div',
+      { class: 'preview-bar' },
+      h('strong', null, 'Предпросмотр'),
+      h('span', { class: 'muted small' }, 'Так форму увидит студент'),
+      h('span', { class: 'spacer' }),
+      h('button', { class: 'btn btn-sm', type: 'button', onclick: () => dialog.close() }, 'Закрыть'),
+    ),
+    content,
+  );
+  document.body.append(dialog);
+  dialog.showModal();
 }
 
 // ---------- Сохранение и публикация ----------

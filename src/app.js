@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { HttpError } from './errors.js';
 import { createFormService } from './forms/formService.js';
+import { createResponseService } from './responses/responseService.js';
 import { formsApiRouter } from './routes/formsApi.js';
+import { publicApiRouter } from './routes/publicApi.js';
 import { securityHeaders } from './securityHeaders.js';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
@@ -18,6 +20,7 @@ const sharedDir = path.join(rootDir, 'src', 'shared');
 export function createApp({ db }) {
   const app = express();
   const forms = createFormService(db);
+  const responses = createResponseService(db);
 
   // Не сообщаем наружу, на чём написан сервер.
   app.disable('x-powered-by');
@@ -32,15 +35,25 @@ export function createApp({ db }) {
   // Общий с сервером код (типы полей, лимиты) — по префиксу /shared.
   app.use('/shared', express.static(sharedDir));
 
+  // Ответы API всегда актуальны: браузер не должен их кешировать. Иначе, например,
+  // после повторного открытия приёма студент мог бы увидеть сохранённое «приём закрыт».
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
+
   app.get('/api/health', (req, res) => {
     res.json({ ok: true });
   });
   app.use('/api/forms', formsApiRouter(forms));
+  app.use('/api/public', publicApiRouter(responses));
 
   // Страницы.
   app.get('/', (req, res) => res.redirect('/admin'));
   app.get('/admin', (req, res) => res.sendFile(path.join(pagesDir, 'admin.html')));
   app.get('/admin/forms/:id', (req, res) => res.sendFile(path.join(pagesDir, 'admin-form.html')));
+  // Страница формы для студента. Саму форму она загружает через /api/public.
+  app.get('/f/:slug', (req, res) => res.sendFile(path.join(pagesDir, 'form.html')));
 
   // Ничего не нашлось.
   app.use('/api', (req, res) => {
@@ -54,7 +67,7 @@ export function createApp({ db }) {
   app.use((err, req, res, next) => {
     // Ожидаемые ошибки (не найдено, неверные данные, конфликт версий) — отдаём как есть.
     if (err instanceof HttpError) {
-      return res.status(err.status).json({ error: err.message, details: err.details });
+      return res.status(err.status).json({ ...err.extra, error: err.message, details: err.details });
     }
     // Ошибки разбора тела запроса (битый JSON, слишком большой размер) — это ошибка клиента.
     if (err.type === 'entity.parse.failed') {
