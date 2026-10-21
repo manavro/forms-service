@@ -1,4 +1,6 @@
-// Основной файл данных сервиса: data/db.json.
+// Файлы данных сервиса: data/db.json (формы и ответы) и data/events.jsonl (аналитика).
+//
+// Основной файл — data/db.json.
 //
 // Внутри:
 //   schemaVersion — версия структуры файла. Если структура когда-нибудь изменится,
@@ -7,6 +9,7 @@
 //   responses     — ответы студентов.
 
 import path from 'node:path';
+import { EventLog } from './eventLog.js';
 import { JsonStore } from './jsonStore.js';
 
 export const SCHEMA_VERSION = 1;
@@ -31,4 +34,9 @@ export async function openDatabase(dataDir) {
     );
   }
   return store;
+}
+
+// Журнал событий аналитики живёт рядом, в data/events.jsonl (подробности — в eventLog.js).
+export function openEventLog(dataDir) {
+  return EventLog.open(path.join(dataDir, 'events.jsonl'));
 }

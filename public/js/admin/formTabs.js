@@ -1,10 +1,11 @@
-// Вкладки страницы формы в админке: «Конструктор» и «Ответы».
+// Вкладки страницы формы в админке: «Конструктор», «Ответы», «Аналитика».
 
 import { h } from '../dom.js';
 
 const TABS = [
   { id: 'builder', title: 'Конструктор', path: '' },
   { id: 'responses', title: 'Ответы', path: '/responses' },
+  { id: 'analytics', title: 'Аналитика', path: '/analytics' },
 ];
 
 // active — id текущей вкладки; counts — необязательные числа рядом с названием, например { responses: 12 }.

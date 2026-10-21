@@ -4,7 +4,7 @@
 //   POST   /api/forms                 создать форму (черновик)
 //   GET    /api/forms/:id             одна форма целиком и число ответов на неё
 //   PUT    /api/forms/:id             сохранить название, описание и поля (нужна version)
-//   DELETE /api/forms/:id             удалить форму вместе с ответами
+//   DELETE /api/forms/:id             удалить форму вместе с ответами и аналитикой
 //   POST   /api/forms/:id/publish     опубликовать / снова открыть приём
 //   POST   /api/forms/:id/close       закрыть приём ответов
 //   POST   /api/forms/:id/duplicate   создать копию формы
@@ -14,7 +14,7 @@
 
 import express from 'express';
 
-export function formsApiRouter(forms) {
+export function formsApiRouter(forms, analytics) {
   const router = express.Router();
 
   router.get('/', (req, res) => {
@@ -36,6 +36,8 @@ export function formsApiRouter(forms) {
 
   router.delete('/:id', async (req, res) => {
     await forms.remove(req.params.id);
+    // Вместе с формой удаляем и её аналитику — события без формы никому не нужны.
+    await analytics.removeForm(req.params.id);
     res.status(204).end();
   });
 

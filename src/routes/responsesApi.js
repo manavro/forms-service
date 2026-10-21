@@ -2,12 +2,12 @@
 //
 //   GET    /api/forms/:id/responses               таблица ответов: колонки (вопросы) и строки (ответы)
 //   GET    /api/forms/:id/responses/export        то же самое файлом CSV для Excel
-//   DELETE /api/forms/:id/responses/:responseId   удалить один ответ
+//   DELETE /api/forms/:id/responses/:responseId   удалить один ответ (и его сессию в аналитике)
 
 import express from 'express';
 import { csvFileName, responsesToCsv } from '../responses/csv.js';
 
-export function responsesApiRouter(responses) {
+export function responsesApiRouter(responses, analytics) {
   // mergeParams — чтобы видеть :id из адреса, к которому подключён этот роутер.
   const router = express.Router({ mergeParams: true });
 
@@ -34,7 +34,9 @@ export function responsesApiRouter(responses) {
   });
 
   router.delete('/:responseId', async (req, res) => {
-    await responses.remove(req.params.id, req.params.responseId);
+    const { sessionId } = await responses.remove(req.params.id, req.params.responseId);
+    // Удалённый ответ обычно тестовый — убираем и его след из аналитики, чтобы не искажал воронку.
+    await analytics.removeSession(req.params.id, sessionId);
     res.status(204).end();
   });
 

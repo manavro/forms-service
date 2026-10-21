@@ -45,16 +45,19 @@ export function createResponseService(store) {
       };
     },
 
-    // Удалить один ответ (например, тестовый).
+    // Удалить один ответ (например, тестовый). Возвращает номер сессии ответа,
+    // чтобы вместе с ответом можно было удалить и его след в аналитике.
     remove(formId, responseId) {
       return store.update((state) => {
         const index = state.responses.findIndex((r) => r.id === responseId && r.formId === formId);
         if (index === -1) throw notFound('Ответ не найден');
-        state.responses.splice(index, 1);
+        const [removed] = state.responses.splice(index, 1);
+        return { sessionId: sessionIdOf(removed) };
       });
     },
 
     // body: { answers: { [id поля]: значение }, submissionId?, website? }
+    // Возвращает { saved, formId, sessionId }: saved = false для дубля и для бота.
     submit(slug, body) {
       const input = body !== null && typeof body === 'object' && !Array.isArray(body) ? body : {};
 
@@ -62,8 +65,8 @@ export function createResponseService(store) {
       // которые вписывают что-то во все поля подряд. Делаем вид, что всё прошло успешно,
       // но ничего не сохраняем.
       if (typeof input.website === 'string' && input.website.trim() !== '') {
-        findPublicForm(store.state, slug);
-        return Promise.resolve({ duplicate: false });
+        const form = findPublicForm(store.state, slug);
+        return Promise.resolve({ saved: false, formId: form.id, sessionId: null });
       }
 
       const submissionId =
@@ -75,25 +78,32 @@ export function createResponseService(store) {
         // Повторная отправка того же ответа (двойной клик, повтор после сбоя сети) —
         // не создаём дубль, просто подтверждаем, что ответ уже принят.
         if (submissionId && state.responses.some((r) => r.formId === form.id && r.submissionId === submissionId)) {
-          return { duplicate: true };
+          return { saved: false, formId: form.id, sessionId: submissionId };
         }
 
         const { values, errors } = validateAnswers(form.fields, input.answers);
         const errorList = Object.entries(errors).map(([path, message]) => ({ path, message }));
         if (errorList.length > 0) throw new ValidationError(errorList, 'Проверьте ответы');
 
-        state.responses.push({
+        const response = {
           id: crypto.randomUUID(),
           formId: form.id,
           formVersion: form.version,
           submissionId,
           submittedAt: new Date().toISOString(),
           answers: form.fields.map((field) => snapshotAnswer(field, values[field.id])),
-        });
-        return { duplicate: false };
+        };
+        state.responses.push(response);
+        return { saved: true, formId: form.id, sessionId: sessionIdOf(response) };
       });
     },
   };
+}
+
+// Номер сессии ответа в аналитике. Страница формы использует submissionId и как номер
+// сессии для событий; если ответ прислали без него (напрямую через API) — берём id ответа.
+function sessionIdOf(response) {
+  return response.submissionId ?? response.id;
 }
 
 function closedError(form) {

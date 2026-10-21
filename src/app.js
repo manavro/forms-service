@@ -4,9 +4,11 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import { createAnalyticsService } from './analytics/analyticsService.js';
 import { HttpError } from './errors.js';
 import { createFormService } from './forms/formService.js';
 import { createResponseService } from './responses/responseService.js';
+import { analyticsApiRouter } from './routes/analyticsApi.js';
 import { formsApiRouter } from './routes/formsApi.js';
 import { publicApiRouter } from './routes/publicApi.js';
 import { responsesApiRouter } from './routes/responsesApi.js';
@@ -17,11 +19,13 @@ const pagesDir = path.join(rootDir, 'pages');
 const publicDir = path.join(rootDir, 'public');
 const sharedDir = path.join(rootDir, 'src', 'shared');
 
-// db — открытое хранилище (см. storage/database.js).
-export function createApp({ db }) {
+// db — открытое хранилище форм и ответов (storage/database.js),
+// eventLog — журнал событий аналитики (storage/eventLog.js).
+export function createApp({ db, eventLog }) {
   const app = express();
   const forms = createFormService(db);
   const responses = createResponseService(db);
+  const analytics = createAnalyticsService(db, eventLog);
 
   // Не сообщаем наружу, на чём написан сервер.
   app.disable('x-powered-by');
@@ -46,15 +50,17 @@ export function createApp({ db }) {
   app.get('/api/health', (req, res) => {
     res.json({ ok: true });
   });
-  app.use('/api/forms/:id/responses', responsesApiRouter(responses));
-  app.use('/api/forms', formsApiRouter(forms));
-  app.use('/api/public', publicApiRouter(responses));
+  app.use('/api/forms/:id/responses', responsesApiRouter(responses, analytics));
+  app.use('/api/forms/:id/analytics', analyticsApiRouter(analytics));
+  app.use('/api/forms', formsApiRouter(forms, analytics));
+  app.use('/api/public', publicApiRouter(responses, analytics));
 
   // Страницы.
   app.get('/', (req, res) => res.redirect('/admin'));
   app.get('/admin', (req, res) => res.sendFile(path.join(pagesDir, 'admin.html')));
   app.get('/admin/forms/:id', (req, res) => res.sendFile(path.join(pagesDir, 'admin-form.html')));
   app.get('/admin/forms/:id/responses', (req, res) => res.sendFile(path.join(pagesDir, 'admin-responses.html')));
+  app.get('/admin/forms/:id/analytics', (req, res) => res.sendFile(path.join(pagesDir, 'admin-analytics.html')));
   // Страница формы для студента. Саму форму она загружает через /api/public.
   app.get('/f/:slug', (req, res) => res.sendFile(path.join(pagesDir, 'form.html')));
 

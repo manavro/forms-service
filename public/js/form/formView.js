@@ -23,8 +23,10 @@ const TEXT_INPUTS = {
 // form: { title, description, fields }
 // onSubmit({ answers, website }) — вызывается, когда все ответы прошли проверку.
 //   Может бросить ApiError: ошибки по полям (details) покажутся у полей, остальное — под кнопкой.
-// hooks — необязательные обработчики событий (понадобятся для аналитики):
-//   onFieldFocus(field), onFieldChange(field), onInvalidSubmit(errors)
+// hooks — необязательные обработчики для аналитики (в предпросмотре их нет):
+//   onFieldFocus(field)         — студент перешёл к полю;
+//   onFieldChange(field, value) — изменился ответ;
+//   onFieldError(field)         — у поля появилась ошибка.
 export function createFormView(form, { onSubmit, submitLabel = 'Отправить', hooks = {}, notice = null }) {
   const answers = {}; // id поля → текущее значение
   const touched = new Set(); // поля, ошибки которых уже нужно показывать
@@ -208,7 +210,7 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
 
   function setAnswer(field, value) {
     answers[field.id] = value;
-    hooks.onFieldChange?.(field);
+    hooks.onFieldChange?.(field, value);
     refreshError(field);
   }
 
@@ -221,6 +223,11 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
   function showError(fieldId, message) {
     const question = questions.get(fieldId);
     if (!question) return;
+    // Сообщаем аналитике только о появлении ошибки, а не о каждом нажатии клавиши, пока она висит.
+    if (message && !question.wrapper.classList.contains('has-error')) {
+      const field = form.fields.find((f) => f.id === fieldId);
+      if (field) hooks.onFieldError?.(field);
+    }
     question.errorEl.textContent = message ?? '';
     question.wrapper.classList.toggle('has-error', Boolean(message));
     for (const input of question.inputs) {
@@ -285,7 +292,6 @@ export function createFormView(form, { onSubmit, submitLabel = 'Отправит
       showError(field.id, errors[field.id]);
     }
     if (Object.keys(errors).length > 0) {
-      hooks.onInvalidSubmit?.(errors);
       showSummary(errors);
       return;
     }

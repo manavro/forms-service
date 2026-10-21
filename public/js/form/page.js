@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { h, mount } from '../dom.js';
 import { newId } from '../ids.js';
 import { createFormView } from './formView.js';
+import { createTracker } from './tracker.js';
 
 const slug = decodeURIComponent(location.pathname.split('/').pop());
 const root = document.getElementById('app');
@@ -11,6 +12,7 @@ const apiUrl = `/api/public/forms/${encodeURIComponent(slug)}`;
 
 // Номер этой попытки заполнения. Если ответ отправится дважды (двойной клик,
 // повтор после сбоя сети), сервер по этому номеру поймёт, что это тот же ответ.
+// Он же — номер сессии в аналитике.
 const submissionId = newId(12);
 
 load();
@@ -31,17 +33,34 @@ async function load() {
   }
 
   document.title = form.title;
+
+  // Аналитика: тот же номер, что и у ответа, — так отправленный ответ связывается с его сессией.
+  const tracker = createTracker({ url: `${apiUrl}/events`, sessionId: submissionId });
+  tracker.view();
+
   const view = createFormView(form, {
+    hooks: {
+      onFieldFocus: (field) => tracker.focus(field),
+      onFieldChange: (field, value) => {
+        // Safari не переводит фокус на переключатели при клике — отмечаем переход к полю и здесь.
+        tracker.focus(field);
+        tracker.change(field, value);
+      },
+      onFieldError: (field) => tracker.error(field),
+    },
     onSubmit: async ({ answers, website }) => {
+      tracker.flush();
       try {
-        await api('POST', `${apiUrl}/responses`, { answers, website, submissionId });
+        await api('POST', `${apiUrl}/responses`, { answers, website, submissionId, elapsed: tracker.elapsed() });
       } catch (err) {
         if (err.status === 410) {
+          tracker.stop();
           showClosed(form.title);
           return;
         }
         throw err;
       }
+      tracker.stop();
       showThanks(form.title);
     },
   });

@@ -6,7 +6,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { createApp } from '../src/app.js';
-import { openDatabase } from '../src/storage/database.js';
+import { openDatabase, openEventLog } from '../src/storage/database.js';
 
 export async function makeTempDir() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'forms-service-test-'));
@@ -21,7 +21,8 @@ export async function makeTempDir() {
 export async function startTestServer() {
   const temp = await makeTempDir();
   const db = await openDatabase(temp.dir);
-  const server = http.createServer(createApp({ db }));
+  const eventLog = await openEventLog(temp.dir);
+  const server = http.createServer(createApp({ db, eventLog }));
   await new Promise((resolve) => server.listen(0, resolve));
   const baseUrl = `http://localhost:${server.address().port}`;
 
@@ -39,8 +40,9 @@ export async function startTestServer() {
   async function stop() {
     await new Promise((resolve) => server.close(resolve));
     await db.flush();
+    await eventLog.flush();
     await temp.cleanup();
   }
 
-  return { baseUrl, api, db, dataDir: temp.dir, stop };
+  return { baseUrl, api, db, eventLog, dataDir: temp.dir, stop };
 }
