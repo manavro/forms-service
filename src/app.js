@@ -9,6 +9,7 @@ import { createFormService } from './forms/formService.js';
 import { createResponseService } from './responses/responseService.js';
 import { formsApiRouter } from './routes/formsApi.js';
 import { publicApiRouter } from './routes/publicApi.js';
+import { responsesApiRouter } from './routes/responsesApi.js';
 import { securityHeaders } from './securityHeaders.js';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
@@ -45,6 +46,7 @@ export function createApp({ db }) {
   app.get('/api/health', (req, res) => {
     res.json({ ok: true });
   });
+  app.use('/api/forms/:id/responses', responsesApiRouter(responses));
   app.use('/api/forms', formsApiRouter(forms));
   app.use('/api/public', publicApiRouter(responses));
 
@@ -52,6 +54,7 @@ export function createApp({ db }) {
   app.get('/', (req, res) => res.redirect('/admin'));
   app.get('/admin', (req, res) => res.sendFile(path.join(pagesDir, 'admin.html')));
   app.get('/admin/forms/:id', (req, res) => res.sendFile(path.join(pagesDir, 'admin-form.html')));
+  app.get('/admin/forms/:id/responses', (req, res) => res.sendFile(path.join(pagesDir, 'admin-responses.html')));
   // Страница формы для студента. Саму форму она загружает через /api/public.
   app.get('/f/:slug', (req, res) => res.sendFile(path.join(pagesDir, 'form.html')));
 

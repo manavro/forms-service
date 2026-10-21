@@ -66,6 +66,7 @@ function renderItem(form) {
       'div',
       { class: 'row' },
       h('a', { class: 'btn btn-sm', href: editUrl }, 'Редактировать'),
+      h('a', { class: 'btn btn-sm', href: `${editUrl}/responses` }, `Ответы (${form.responseCount})`),
       isPublic &&
         h(
           'button',

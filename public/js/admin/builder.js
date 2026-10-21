@@ -13,6 +13,7 @@ import { api } from '../api.js';
 import { h, mount } from '../dom.js';
 import { newId } from '../ids.js';
 import { createFormView } from '../form/formView.js';
+import { formTabs } from './formTabs.js';
 import { copyText, countLabel, plural, publicFormUrl, statusBadge, toast } from '../ui.js';
 import { FIELD_TYPES, FORM_LIMITS } from '/shared/fieldTypes.js';
 
@@ -96,6 +97,7 @@ function render(focusKeys) {
   mount(
     root,
     h('a', { class: 'back-link', href: '/admin' }, '← Все формы'),
+    formTabs(formId, 'builder', { responses: state.responseCount }),
     panelEl,
     state.conflict &&
       h(

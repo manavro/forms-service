@@ -8,6 +8,7 @@ import crypto from 'node:crypto';
 import { ValidationError, gone, notFound } from '../errors.js';
 import { ID_PATTERN } from '../ids.js';
 import { validateAnswers } from '../shared/answers.js';
+import { buildResponseTable } from './responseTable.js';
 
 export function createResponseService(store) {
   // Опубликованная форма по ссылке. Черновик снаружи не виден — как будто его нет.
@@ -28,6 +29,29 @@ export function createResponseService(store) {
         description: form.description,
         fields: form.fields,
       };
+    },
+
+    // Все ответы на форму в виде таблицы (для админки и CSV).
+    table(formId) {
+      const { forms, responses } = store.state;
+      const form = forms.find((f) => f.id === formId);
+      if (!form) throw notFound('Форма не найдена');
+      return {
+        form,
+        table: buildResponseTable(
+          form,
+          responses.filter((r) => r.formId === formId),
+        ),
+      };
+    },
+
+    // Удалить один ответ (например, тестовый).
+    remove(formId, responseId) {
+      return store.update((state) => {
+        const index = state.responses.findIndex((r) => r.id === responseId && r.formId === formId);
+        if (index === -1) throw notFound('Ответ не найден');
+        state.responses.splice(index, 1);
+      });
     },
 
     // body: { answers: { [id поля]: значение }, submissionId?, website? }
