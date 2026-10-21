@@ -1,16 +1,22 @@
 // Создание Express-приложения. Отделено от server.js, чтобы приложение
-// можно было поднимать в тестах без реального порта.
+// можно было поднимать в тестах без реального порта и с временной папкой данных.
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import { HttpError } from './errors.js';
+import { createFormService } from './forms/formService.js';
+import { formsApiRouter } from './routes/formsApi.js';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const pagesDir = path.join(rootDir, 'pages');
 const publicDir = path.join(rootDir, 'public');
+const sharedDir = path.join(rootDir, 'src', 'shared');
 
-export function createApp() {
+// db — открытое хранилище (см. storage/database.js).
+export function createApp({ db }) {
   const app = express();
+  const forms = createFormService(db);
 
   // Не сообщаем наружу, на чём написан сервер.
   app.disable('x-powered-by');
@@ -21,10 +27,13 @@ export function createApp() {
 
   // Статика (стили, скрипты страниц) — по префиксу /static.
   app.use('/static', express.static(publicDir));
+  // Общий с сервером код (типы полей, лимиты) — по префиксу /shared.
+  app.use('/shared', express.static(sharedDir));
 
   app.get('/api/health', (req, res) => {
     res.json({ ok: true });
   });
+  app.use('/api/forms', formsApiRouter(forms));
 
   // Страницы.
   app.get('/', (req, res) => res.redirect('/admin'));
@@ -38,9 +47,12 @@ export function createApp() {
     res.status(404).sendFile(path.join(pagesDir, 'not-found.html'));
   });
 
-  // Непредвиденная ошибка: подробности — в лог сервера, пользователю — общее сообщение.
-  // Express узнаёт обработчик ошибок по четырём аргументам, поэтому next обязателен.
+  // Обработчик ошибок. Express узнаёт его по четырём аргументам, поэтому next обязателен.
   app.use((err, req, res, next) => {
+    // Ожидаемые ошибки (не найдено, неверные данные, конфликт версий) — отдаём как есть.
+    if (err instanceof HttpError) {
+      return res.status(err.status).json({ error: err.message, details: err.details });
+    }
     // Ошибки разбора тела запроса (битый JSON, слишком большой размер) — это ошибка клиента.
     if (err.type === 'entity.parse.failed') {
       return res.status(400).json({ error: 'Некорректный JSON в теле запроса' });
@@ -49,7 +61,9 @@ export function createApp() {
       return res.status(413).json({ error: 'Слишком большой запрос' });
     }
 
+    // Непредвиденная ошибка: подробности — в лог сервера, пользователю — общее сообщение.
     console.error(err);
+    if (res.headersSent) return next(err);
     if (req.path.startsWith('/api')) {
       return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
